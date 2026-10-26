@@ -1,20 +1,25 @@
+import { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ReasonScreen } from './src/ReasonScreen';
+import { WaitingRoomScreen } from './src/WaitingRoomScreen';
+import type { Ticket } from './src/api';
 
 export default function App() {
+  const [ticket, setTicket] = useState<Ticket | null>(null);
+
   return (
-    <View style={styles.container}>
-      <Text>Salle d’attente — application initialisée</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaProvider>
+      {ticket ? (
+        <WaitingRoomScreen
+          ticketId={ticket.id}
+          initialTicket={ticket}
+          onLeave={() => setTicket(null)}
+        />
+      ) : (
+        <ReasonScreen onJoined={setTicket} />
+      )}
+      <StatusBar style="dark" />
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

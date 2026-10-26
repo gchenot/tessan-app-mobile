@@ -15,8 +15,8 @@ export class TicketsController {
   constructor(private readonly queue: QueueService) {}
 
   @Post()
-  create(@Body() body: { reason?: unknown } | undefined) {
-    return this.queue.createTicket(body?.reason);
+  create(@Body() body: { reason?: unknown; requestId?: unknown } | undefined) {
+    return this.queue.createTicket(body?.reason, body?.requestId);
   }
 
   @Get(':id')

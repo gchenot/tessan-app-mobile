@@ -24,6 +24,7 @@ interface StoredTicket {
 export class QueueService implements OnModuleInit, OnModuleDestroy {
   private readonly tickets = new Map<string, StoredTicket>();
   private readonly waitingOrder: string[] = [];
+  private readonly createdByRequest = new Map<string, string>();
   private readonly averageConsultationMinutes: number;
   private callTimer?: ReturnType<typeof setInterval>;
 
@@ -56,14 +57,39 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     if (this.callTimer) clearInterval(this.callTimer);
   }
 
-  createTicket(reason: unknown): Ticket {
+  createTicket(reason: unknown, requestId?: unknown): Ticket {
     if (!isReasonId(reason)) {
       throw new BadRequestException('Motif absent ou inconnu');
+    }
+    let idempotencyKey: string | undefined;
+    if (requestId !== undefined) {
+      if (
+        typeof requestId !== 'string' ||
+        requestId.length === 0 ||
+        requestId.length > 100
+      ) {
+        throw new BadRequestException('Identifiant de requête invalide');
+      }
+      idempotencyKey = requestId;
+    }
+
+    if (idempotencyKey) {
+      const existingId = this.createdByRequest.get(idempotencyKey);
+      if (existingId) {
+        const existingTicket = this.getTicket(existingId);
+        if (existingTicket.reason !== reason) {
+          throw new ConflictException('Identifiant de requête déjà utilisé');
+        }
+        return existingTicket;
+      }
     }
 
     const id = randomUUID();
     this.tickets.set(id, { id, reason, status: TICKET_STATUS.WAITING });
     this.waitingOrder.push(id);
+    if (idempotencyKey) {
+      this.createdByRequest.set(idempotencyKey, id);
+    }
     return this.getTicket(id);
   }
 

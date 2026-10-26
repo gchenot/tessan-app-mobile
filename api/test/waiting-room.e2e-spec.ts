@@ -71,4 +71,27 @@ describe('Waiting room API', () => {
       (await request(app.getHttpServer()).delete(`/tickets/${id}`)).status,
     ).toBe(409);
   });
+
+  it('returns the same ticket when a creation request is retried', async () => {
+    const body = { reason: 'fievre', requestId: 'retry-1' };
+    const created = await request(app.getHttpServer())
+      .post('/tickets')
+      .send(body);
+    const retried = await request(app.getHttpServer())
+      .post('/tickets')
+      .send(body);
+    const next = await request(app.getHttpServer())
+      .post('/tickets')
+      .send({ reason: 'douleur' });
+
+    expect(created.status).toBe(201);
+    expect(retried.status).toBe(201);
+    expect(retried.body.id).toBe(created.body.id);
+    expect(next.body.position).toBe(5);
+
+    const reusedForAnotherReason = await request(app.getHttpServer())
+      .post('/tickets')
+      .send({ reason: 'autre', requestId: body.requestId });
+    expect(reusedForAnotherReason.status).toBe(409);
+  });
 });
