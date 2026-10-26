@@ -67,6 +67,8 @@ npm run build
 
 Les tests métier vérifient la progression de la file, l’annulation et les erreurs de validation. Les tests HTTP vérifient le parcours création/lecture/annulation, les codes `400`, `404` et `409`, et l’absence de doublon après un retry de création. Le parcours mobile et les états de reconnexion ont aussi été vérifiés manuellement sur iPhone.
 
+La CI GitHub Actions exécute ces vérifications et la compilation de l’API à chaque push ou pull request, avec Node 24 et les deux fichiers de verrouillage npm.
+
 ## Choix techniques
 
 - **NestJS et TypeScript** pour séparer les routes HTTP (`reasons.controller.ts`, `tickets.controller.ts`) de la logique métier (`queue.service.ts`). Un seul module `waiting-room` suffit pour ce petit domaine.
