@@ -16,7 +16,7 @@ L’utilisateur choisit un motif, crée un ticket, voit sa position et son atten
 
 ```sh
 cd api
-npm install
+npm ci
 npm run start:dev
 ```
 
@@ -47,14 +47,16 @@ Dans un deuxième terminal :
 
 ```sh
 cd app
-npm install
+npm ci
 npx expo login
 npm start
 ```
 
 Se connecter au même compte Expo dans Expo Go sur l’iPhone. Scanner ensuite le code QR affiché dans le terminal avec l’appareil photo de l’iPhone. L’app utilise Expo SDK 58, la version installée dans Expo Go sur l’iPhone de test.
 
-L’écran 1 charge les motifs depuis l’API et crée un ticket. L’écran 2 affiche la position et l’attente estimée, puis interroge l’API toutes les 12 secondes. Le rafraîchissement s’arrête lorsque le ticket est appelé ou annulé, ou lorsque l’écran est quitté. Les requêtes expirent après 8 secondes et l’app affiche un message avec « Réessayer » en cas d’erreur. Quitter la file demande confirmation. Si l’API redémarre et ne connaît plus le ticket, l’app propose de revenir aux motifs. Si l’API est inaccessible, l’annulation ne peut pas être confirmée et l’app conserve le ticket affiché.
+L’écran 1 charge les motifs depuis l’API et crée un ticket. Après création, l’ID du ticket est sauvegardé sur l’appareil. À la réouverture, l’app demande son état à l’API et restaure l’écran d’attente. Si l’API est inaccessible, l’ID est conservé et l’app propose de réessayer ; si l’API a redémarré et répond `404`, l’ancien ID est supprimé et l’utilisateur revient aux motifs. Si le stockage local est inaccessible, l’app permet de continuer sans restauration après avoir averti qu’un ancien ticket pourrait rester actif. La fermeture pendant le `POST`, avant la sauvegarde de l’ID, n’est pas couverte.
+
+L’écran 2 affiche la position et l’attente estimée, puis interroge l’API toutes les 12 secondes. Le rafraîchissement s’arrête lorsque le ticket est appelé ou annulé, ou lorsque l’écran est quitté. Les requêtes expirent après 8 secondes et l’app affiche un message avec « Réessayer » en cas d’erreur. Quitter la file demande confirmation. Si l’API est inaccessible, l’annulation ne peut pas être confirmée et l’app conserve le ticket affiché.
 
 ## Vérifications
 
@@ -65,7 +67,7 @@ npm run build
 
 `check` lance le lint des deux projets, la vérification Prettier de l’API, la vérification TypeScript des deux projets, trois tests métier et trois tests HTTP de l’API. Chaque projet possède son propre `package-lock.json` ; le `package.json` à la racine sert seulement de raccourci pour ces commandes.
 
-Les tests métier vérifient la progression de la file, l’annulation et les erreurs de validation. Les tests HTTP vérifient le parcours création/lecture/annulation, les codes `400`, `404` et `409`, et l’absence de doublon après un retry de création. Le parcours mobile et les états de reconnexion ont aussi été vérifiés manuellement sur iPhone.
+Les tests métier vérifient la progression de la file, l’annulation et les erreurs de validation. Les tests HTTP vérifient le parcours création/lecture/annulation, les codes `400`, `404` et `409`, et l’absence de doublon après un retry de création. Le parcours principal et les erreurs réseau ont été vérifiés manuellement sur iPhone. La reprise après fermeture et les erreurs simulées d’AsyncStorage ne sont pas encore couvertes par des tests automatisés ; la reprise après fermeture reste à valider sur iPhone.
 
 La CI GitHub Actions exécute ces vérifications et la compilation de l’API à chaque push ou pull request, avec Node 24 et les deux fichiers de verrouillage npm.
 
@@ -74,15 +76,16 @@ La CI GitHub Actions exécute ces vérifications et la compilation de l’API à
 - **NestJS et TypeScript** pour séparer les routes HTTP (`reasons.controller.ts`, `tickets.controller.ts`) de la logique métier (`queue.service.ts`). Un seul module `waiting-room` suffit pour ce petit domaine.
 - **Mémoire du processus** avec une `Map` pour retrouver les tickets et un tableau pour l’ordre d’attente. Aucun compte ni base de données ne sont nécessaires pour cet exercice.
 - **React Native avec Expo SDK 58** pour exécuter rapidement la même application sur un iPhone avec Expo Go. `App.tsx` choisit entre les deux écrans ; aucune bibliothèque de navigation n’est nécessaire.
-- **`fetch` natif** dans `app/src/api.ts` pour centraliser l’URL, les erreurs HTTP et le délai de 8 secondes. Le polling utilise `setTimeout` après chaque réponse pour éviter que plusieurs requêtes se chevauchent. `expo-crypto` fournit l’UUID des créations, et `react-native-safe-area-context` protège le contenu des encoches et de la barre système.
+- **`fetch` natif** dans `app/src/api.ts` pour centraliser l’URL, les erreurs HTTP et le délai de 8 secondes. Le polling utilise `setTimeout` après chaque réponse pour éviter que plusieurs requêtes se chevauchent. `expo-crypto` fournit l’UUID des créations, `@react-native-async-storage/async-storage` conserve l’ID du ticket sur l’appareil, et `react-native-safe-area-context` protège le contenu des encoches et de la barre système.
 
 ## Limites et suite possible
 
 - Les données et les trois patients fictifs sont recréés à chaque redémarrage de l’API. Pour montrer les quatre positions, redémarrer l’API juste avant de rejoindre la file ; les trois premiers patients sont appelés en 60 secondes.
-- Un ticket affiché n’est pas conservé si l’app est entièrement fermée. Les tickets appelés ou annulés restent en mémoire jusqu’au redémarrage de l’API.
+- L’ID local ne permet pas de restaurer un ticket après redémarrage de l’API : les données serveur sont perdues et l’app revient aux motifs après le `404`. La fermeture pendant le `POST` n’est pas couverte par cette reprise courte.
+- Les tickets appelés ou annulés restent en mémoire jusqu’au redémarrage de l’API.
 - Sans serveur accessible, l’app ne peut pas garantir l’annulation d’un ticket. Elle attend une réponse de l’API avant de quitter la file.
-- Avec environ deux heures supplémentaires, je conserverais l’identifiant du ticket sur l’appareil, ajouterais un test automatisé du comportement mobile après un `404`, puis testerais le parcours sur Android et sur plusieurs tailles d’écran.
+- Pour aller plus loin, je pourrais sauvegarder le `requestId` avant le `POST` afin de couvrir aussi une fermeture pendant la création, ajouter des tests automatisés de restauration et d’erreurs de stockage, puis vérifier VoiceOver, Android et plusieurs tailles d’écran.
 
 ## Réalisation et IA
 
-J’ai utilisé OpenAI Codex pour générer la majorité du code de l’API et de l’app, écrire les tests et la documentation, consulter les documentations officielles d’Expo et de React Native, et corriger les problèmes découverts pendant les essais. J’ai défini le périmètre et vérifié manuellement le parcours sur mon iPhone. Temps de travail actif : actuellement 2 heures.
+J’ai utilisé OpenAI Codex pour générer la majorité du code de l’API et de l’app, écrire les tests et la documentation, consulter les documentations officielles d’Expo et de React Native, et corriger les problèmes découverts pendant les essais. J’ai défini le périmètre et vérifié manuellement le parcours sur mon iPhone. Temps de travail actif : 3h.
