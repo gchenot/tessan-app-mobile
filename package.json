@@ -2,10 +2,11 @@
   "name": "tessan-waiting-room",
   "private": true,
   "scripts": {
-    "check": "npm run check:lint && npm run check:types && npm run check:tests",
+    "check": "npm run check:lint && npm run check:format && npm run check:types && npm run check:tests",
     "check:lint": "npm --prefix api run lint && npm --prefix app run lint",
+    "check:format": "npm --prefix api run format:check",
     "check:types": "npm --prefix api run check-types && npm --prefix app run check-types",
-    "check:tests": "npm --prefix api test",
+    "check:tests": "npm --prefix api test && npm --prefix api run test:e2e",
     "build": "npm --prefix api run build"
   }
 }
