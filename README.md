@@ -6,6 +6,22 @@ Deux projets TypeScript dans un même dépôt : une API NestJS dans `api/` et un
 
 L’utilisateur choisit un motif, crée un ticket, voit sa position et son attente estimée, puis attend son appel ou quitte la file après confirmation. Le parcours a été vérifié sur iPhone avec Expo Go, y compris une coupure et un redémarrage de l’API.
 
+## Captures d’écran
+
+Captures du parcours réalisé sur iPhone : choix du motif, progression dans la file, appel du patient et état après redémarrage de l’API.
+
+| Choix du motif | Motif sélectionné | Position 4 |
+| --- | --- | --- |
+| <img src="docs/screenshots/etape-0-choix-motif.png" alt="Écran de choix du motif" width="220"> | <img src="docs/screenshots/etape-1-motif-selectionne.png" alt="Motif sélectionné avant de rejoindre la file" width="220"> | <img src="docs/screenshots/etape-2-position-4.png" alt="Patient en position 4" width="220"> |
+
+| Position 3 | Position 2 | Position 1 |
+| --- | --- | --- |
+| <img src="docs/screenshots/etape-3-position-3.png" alt="Patient en position 3" width="220"> | <img src="docs/screenshots/etape-4-position-2.png" alt="Patient en position 2" width="220"> | <img src="docs/screenshots/etape-5-position-1.png" alt="Patient en position 1" width="220"> |
+
+| Tour du patient | Confirmation de sortie | API redémarrée |
+| --- | --- | --- |
+| <img src="docs/screenshots/etape-6-tour-du-patient.png" alt="Le médecin est disponible" width="220"> | <img src="docs/screenshots/confirmation-quitter-file.png" alt="Confirmation avant de quitter la file" width="220"> | <img src="docs/screenshots/api-redemarree-ticket-introuvable.png" alt="Ticket introuvable après redémarrage de l’API" width="220"> |
+
 ## Prérequis
 
 - Node.js 24 LTS (`nvm use` à la racine si nvm est installé)
@@ -41,7 +57,13 @@ L’app envoie un UUID `requestId` lors de la création et réutilise le même i
 
 ## Démarrer l’application
 
-Le téléphone et l’ordinateur doivent être connectés au même réseau Wi-Fi. Créer `app/.env.local` à partir de `app/.env.example`, puis remplacer l’adresse d’exemple par l’adresse IP locale du Mac (visible avec `ifconfig en0`). Sur l’iPhone, `localhost` désigne le téléphone et ne permet pas de joindre l’API du Mac.
+Le téléphone et l’ordinateur doivent être connectés au même réseau Wi-Fi. Depuis la racine du dépôt, créer le fichier local (une seule fois) :
+
+```sh
+cp app/.env.example app/.env.local
+```
+
+Remplacer ensuite l’adresse d’exemple par l’adresse IP locale du Mac (visible avec `ipconfig getifaddr en0`). Sur l’iPhone, `localhost` désigne le téléphone et ne permet pas de joindre l’API du Mac.
 
 Dans un deuxième terminal :
 
@@ -67,7 +89,7 @@ npm run build
 
 `check` lance le lint des deux projets, la vérification Prettier de l’API, la vérification TypeScript des deux projets, trois tests métier et trois tests HTTP de l’API. Chaque projet possède son propre `package-lock.json` ; le `package.json` à la racine sert seulement de raccourci pour ces commandes.
 
-Les tests métier vérifient la progression de la file, l’annulation et les erreurs de validation. Les tests HTTP vérifient le parcours création/lecture/annulation, les codes `400`, `404` et `409`, et l’absence de doublon après un retry de création. Le parcours principal et les erreurs réseau ont été vérifiés manuellement sur iPhone. La reprise après fermeture et les erreurs simulées d’AsyncStorage ne sont pas encore couvertes par des tests automatisés ; la reprise après fermeture reste à valider sur iPhone.
+Les tests métier vérifient la progression de la file, l’annulation et les erreurs de validation. Les tests HTTP vérifient le parcours création/lecture/annulation, les codes `400`, `404` et `409`, et l’absence de doublon après un retry de création. Le parcours principal, les erreurs réseau et la reprise après fermeture ont été vérifiés manuellement sur iPhone. La reprise et les erreurs simulées d’AsyncStorage ne sont pas couvertes par des tests automatisés.
 
 La CI GitHub Actions exécute ces vérifications et la compilation de l’API à chaque push ou pull request, avec Node 24 et les deux fichiers de verrouillage npm.
 
@@ -84,7 +106,7 @@ La CI GitHub Actions exécute ces vérifications et la compilation de l’API à
 - L’ID local ne permet pas de restaurer un ticket après redémarrage de l’API : les données serveur sont perdues et l’app revient aux motifs après le `404`. La fermeture pendant le `POST` n’est pas couverte par cette reprise courte.
 - Les tickets appelés ou annulés restent en mémoire jusqu’au redémarrage de l’API.
 - Sans serveur accessible, l’app ne peut pas garantir l’annulation d’un ticket. Elle attend une réponse de l’API avant de quitter la file.
-- Pour aller plus loin, je pourrais sauvegarder le `requestId` avant le `POST` afin de couvrir aussi une fermeture pendant la création, ajouter des tests automatisés de restauration et d’erreurs de stockage, puis vérifier VoiceOver, Android et plusieurs tailles d’écran.
+- Avec deux heures supplémentaires, je prioriserais la sauvegarde du `requestId` avant le `POST` pour couvrir une fermeture pendant la création, puis des tests automatisés de restauration et d’erreurs de stockage. Je vérifierais ensuite VoiceOver, le fonctionnement des notifications locales et plusieurs tailles d’écran si le temps le permet.
 
 ## Réalisation et IA
 
